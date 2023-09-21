@@ -3,22 +3,23 @@
 import cv2
 import numpy as np
 
-filename = "ooo-2.png"
+filename = "po.png"
 
 def cvHough(img0):
     height, width = img0.shape[:2]
     print("(%d,%d)"%(height, width))
     img = cv2.cvtColor(img0, cv2.COLOR_BGR2GRAY)
     th, img = cv2.threshold(img, 196, 255, cv2.THRESH_BINARY)#THRESH_OTSU for gray ##THRESH_BINARY
+    ##img = cv2.bitwise_not(img)
     circles = cv2.HoughCircles(
         img, 
         cv2.HOUGH_GRADIENT, 
-        dp=1, ##値が大きいほど検出基準が緩くなり、値が小さいほど検出基準が厳しくなります。##0.8 ~ 1.2 くらいの幅で調整する
+        dp=1.2, ##値が大きいほど検出基準が緩くなり、値が小さいほど検出基準が厳しくなります。##0.8 ~ 1.2 くらいの幅で調整する
         minDist=50, 
         param1=100, ###  Canny法のHysteresis処理の閾値 ## 100前後を固定
-        param2=42, ### 円の中心を検出する際の閾値 ## 30だと小さい
-        minRadius=0, 
-        maxRadius=500)
+        param2=40, ### 円の中心を検出する際の閾値 ## 30だと小さい
+        minRadius=20, 
+        maxRadius=100)
     if isinstance(circles,np.ndarray):
         for circle in circles[0, :]:
             # 円周を描画する
@@ -60,16 +61,16 @@ def scratchHough(img):
         r=r0-20
         if r0%2==1:
             continue
-        print("r=%d"%(r0))
+        print("r=%d"%(r0),end=":")
         for y in range(height):
             for x in range(width):
                 hough[y][x]=0
         for y in range(height):
             for x in range(width):
                 if pixels[y][x]==1:
-                    circle=int(4*r0+2)
+                    circle=int(2*r0+2)
                     for t in range(circle):
-                        theta=2*PI*t/(4*r0)
+                        theta=2*PI*t/(2*r0)
                         yy=int(y+r0*np.sin(theta))
                         xx=int(x+r0*np.cos(theta))
                         if 0<=yy and yy<height and 0<=xx and xx<width:
@@ -105,11 +106,11 @@ def scratchHough(img):
                         if top:
                             answer.insert(0, {'x':x, 'y':y, 'r':r0, 'hough':hough[y][x]})
                             del answer[-1]
-
+        print(",%d,%d,%0.3f"%(r0,answer[0]['r'],answer[0]['hough']/r0))
     print ("step 2 done")
 
 # readImage
 img = cv2.imread(filename)
-#scratchHough(img)
-cvHough(img)
+scratchHough(img)
+#cvHough(img)
 
