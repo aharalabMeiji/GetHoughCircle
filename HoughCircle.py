@@ -2,29 +2,57 @@
 
 import cv2
 import numpy as np
+import statistics
 
-filename = "po.png"
+filename = "ooo.png"
 
 def cvHough(img0):
+
     height, width = img0.shape[:2]
     print("(%d,%d)"%(height, width))
     img = cv2.cvtColor(img0, cv2.COLOR_BGR2GRAY)
     th, img = cv2.threshold(img, 196, 255, cv2.THRESH_BINARY)#THRESH_OTSU for gray ##THRESH_BINARY
+    ## BACKGROUND:255, FOREGROUND:0
     ##img = cv2.bitwise_not(img)
-    circles = cv2.HoughCircles(
-        img, 
-        cv2.HOUGH_GRADIENT, 
-        dp=1.2, ##値が大きいほど検出基準が緩くなり、値が小さいほど検出基準が厳しくなります。##0.8 ~ 1.2 くらいの幅で調整する
-        minDist=50, 
-        param1=100, ###  Canny法のHysteresis処理の閾値 ## 100前後を固定
-        param2=40, ### 円の中心を検出する際の閾値 ## 30だと小さい
-        minRadius=20, 
-        maxRadius=100)
-    if isinstance(circles,np.ndarray):
-        for circle in circles[0, :]:
-            # 円周を描画する
-            cv2.circle(img0, center=(int(circle[0]), int(circle[1])), radius=int(circle[2]), color=(0, 165, 255), thickness=2)
-            print("(%f,%f),%f"%(circle[0], circle[1], circle[2]))
+    globalAnswer=[]
+    for r2r in range(40):
+        r2=60-r2r
+        circles = cv2.HoughCircles(
+            img, 
+            cv2.HOUGH_GRADIENT, 
+            dp=1.0, ##値が大きいほど検出基準が緩くなり、値が小さいほど検出基準が厳しくなります。##0.8 ~ 1.2 くらいの幅で調整する
+            minDist=50, 
+            param1=100, ###  Canny法のHysteresis処理の閾値 ## 100前後を固定
+            param2=r2, ### 円の中心を検出する際の閾値 ## 30だと小さい
+            minRadius=20, 
+            maxRadius=min(height, width))
+        localAnswer=[]
+        if isinstance(circles,np.ndarray):
+            for circle in circles[0, :]:
+                cx, cy, cr=circle[0], circle[1], circle[2]
+                count=0
+                for t in range(60):
+                    check=False
+                    for s in range(21):
+                        dx=int(cx+(cr+s-10)*np.cos(2*t*np.pi/60))
+                        dy=int(cy+(cr+s-10)*np.sin(2*t*np.pi/60))
+                        if 0<=dx and dx<width and 0<=dy and dy<height:
+                            if img.item(dy, dx)<200:
+                                check=True
+                                break
+                    if check:
+                        count += 1 
+                if count>50:
+                    localAnswer.append([cx,cy,cr,count])
+            globalAnswer.append(localAnswer)
+    answerSizes=[len(answer) for answer in globalAnswer] 
+    bestAnswerSize = statistics.mode(answerSizes)
+    bestAnswers = [answer for answer in globalAnswer if len(answer)==bestAnswerSize]
+    bestAnswer=bestAnswers[int(len(bestAnswers)/2)]
+    # 円周を描画する
+    for cc in bestAnswer:
+        cv2.circle(img0, center=(int(cc[0]), int(cc[1])), radius=int(cc[2]), color=(0, 165, 255), thickness=2)
+        print("(%f,%f),%f"%(cc[0], cc[1], cc[2]))
     cv2.imshow("img",img0)
     k = cv2.waitKey(0)
     pass
@@ -111,6 +139,6 @@ def scratchHough(img):
 
 # readImage
 img = cv2.imread(filename)
-scratchHough(img)
-#cvHough(img)
+#scratchHough(img)
+cvHough(img)
 
